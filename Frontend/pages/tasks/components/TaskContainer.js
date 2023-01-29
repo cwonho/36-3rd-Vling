@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import styled from 'styled-components';
 
-export default function TaskContainer({ task }) {
-  const { name, labelers, totalVideos, doneVideos, status } = task;
+const TaskContainer = ({ name, labelers, totalVideos, doneVideos, status }) => {
   return (
     <>
       <Link href={`/tasks/detail/${name}`}>
@@ -13,7 +12,7 @@ export default function TaskContainer({ task }) {
           <TaskInfo>
             <FolderIcon src="./images/folder.png" alt="folderIcon" />
             <NumOfVideos># Videos : {totalVideos}</NumOfVideos>
-            <NumOfVideos># Labelers : {labelers?.length}</NumOfVideos>
+            <NumOfVideos># Labelers : {labelers.length}</NumOfVideos>
           </TaskInfo>
           <ProgressInfo>
             <TaskName>{name}</TaskName>
@@ -32,7 +31,9 @@ export default function TaskContainer({ task }) {
       </Link>
     </>
   );
-}
+};
+
+export default TaskContainer;
 
 const TaskWrap = styled.div`
   width: 30%;

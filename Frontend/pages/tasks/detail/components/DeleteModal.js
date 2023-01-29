@@ -1,28 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/router';
 import ModalPortal from '../../../../components/ModalPortal';
-import { toast } from 'react-toastify';
 
-export default function DeleteModal({
+const DeleteModal = ({
   taskName,
   taskKind,
   expDate,
   setDeleteModal,
-  deleteTask,
-}) {
-  const router = useRouter();
-  const handleDeleteTask = async () => {
-    try {
-      await deleteTask({ variables: { name: taskName } });
-      toast.success(`${taskName}이 삭제 되었습니다.`);
-    } catch (err) {
-      toast.error(err);
-    }
-    setDeleteModal(false);
-    router.push('/tasks');
-  };
-
+  handleDeleteTask,
+}) => {
   return (
     <ModalPortal>
       <BlurWrap />
@@ -46,7 +32,9 @@ export default function DeleteModal({
       </DeleteWrap>
     </ModalPortal>
   );
-}
+};
+
+export default DeleteModal;
 
 const DeleteWrap = styled.div`
   background-color: #606060;

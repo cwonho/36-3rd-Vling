@@ -1,27 +1,7 @@
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useMutation } from '@apollo/client';
-import { ADD_TASK_TO_LABELER } from '../../../../components/gql';
 
-export default function AllLabelersList({
-  taskName,
-  allLabelers,
-  currLabelersList,
-  setCurrLabelersList,
-}) {
-  const [addTaskToLabeler] = useMutation(ADD_TASK_TO_LABELER);
-
-  const onAddLabeler = async (e, id) => {
-    await addTaskToLabeler({
-      variables: { id: id, email: e.target.value, name: taskName },
-    });
-
-    setCurrLabelersList([
-      ...currLabelersList,
-      { _id: id, email: e.target.value },
-    ]);
-  };
-
+const AllLabelersList = ({ allLabelers, currLabelersList, onAddLabeler }) => {
   const sortedLabelers = allLabelers.sort(function (a, b) {
     if (
       currLabelersList.find(
@@ -63,7 +43,9 @@ export default function AllLabelersList({
       </LabelerListWrap>
     </ListWrap>
   );
-}
+};
+
+export default AllLabelersList;
 
 const ListWrap = styled.div``;
 

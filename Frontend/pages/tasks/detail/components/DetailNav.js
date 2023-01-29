@@ -1,23 +1,23 @@
 import styled from 'styled-components';
 import Link from 'next/link';
-import DeleteModal from './DeleteModal';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { useRouter } from 'next/router';
 import { DELETE_TASK, UPDATE_TASK } from '../../../../components/gql';
 import { toast } from 'react-toastify';
+import DeleteModal from './DeleteModal';
 
-export default function DetailNav({ taskName, taskDetail }) {
-  const router = useRouter();
-  const [edit, setEdit] = useState(false);
-  const [editName, setEditName] = useState('');
+const DetailNav = ({
+  kind,
+  status,
+  expiration_date,
+  totalVideos,
+  doneVideos,
+  name,
+}) => {
   const [deleteModal, setDeleteModal] = useState(false);
 
-  if (taskDetail == undefined) {
-    return;
-  }
-
-  const { kind, status, expiration_date, totalVideos, doneVideos } = taskDetail;
+  const router = useRouter();
 
   const [deleteTask] = useMutation(DELETE_TASK);
   const [updateTask] = useMutation(UPDATE_TASK);
@@ -26,25 +26,21 @@ export default function DetailNav({ taskName, taskDetail }) {
     setDeleteModal(true);
   };
 
-  const handleEditClick = () => {
-    setEdit(!edit);
-  };
-
-  const handleEditNameInput = e => {
-    setEditName(e.target.value);
-  };
-
-  const handleEditSubmit = () => {
-    updateTask({ variables: { name: taskName, newName: editName } });
-    alert('task 이름이 수정되었습니다.');
-    setEdit(!edit);
-    router.push(`/tasks/detail/${editName}`);
+  const handleDeleteTask = async () => {
+    try {
+      await deleteTask({ variables: { name: name } });
+      toast.success(`${name}이 삭제 되었습니다.`);
+    } catch (err) {
+      toast.error(err);
+    }
+    setDeleteModal(false);
+    router.push('/tasks');
   };
 
   const setTaskDone = async () => {
     try {
-      await updateTask({ variables: { name: taskName, status: !status } });
-      toast.success(`"${taskName}" 을 완료하였습니다.`);
+      await updateTask({ variables: { name: name, status: !status } });
+      toast.success(`"${name}" 을 완료하였습니다.`);
     } catch (err) {
       toast.error(err);
     }
@@ -55,34 +51,7 @@ export default function DetailNav({ taskName, taskDetail }) {
     <DetailTop>
       <TaskInfo>
         <TaskNameNav>
-          {edit ? (
-            <>
-              <TaskNameInput
-                value={editName}
-                placeholder="예: 영상목록1"
-                onChange={handleEditNameInput}
-              ></TaskNameInput>
-              <CloseIcon
-                src="/images/close.png"
-                alt="closeIcon"
-                onClick={handleEditClick}
-              />
-              <CheckIcon
-                src="/images/check.png"
-                alt="checkIcon"
-                onClick={handleEditSubmit}
-              />
-            </>
-          ) : (
-            <>
-              <EditIcon
-                src="/images/edit.png"
-                alt="editIcon"
-                onClick={handleEditClick}
-              />
-              <TaskName>{taskName}</TaskName>
-            </>
-          )}
+          <TaskName>{name}</TaskName>
         </TaskNameNav>
         <TaskCategory>Kind: {kind}</TaskCategory>
         <ExpireDate>Exp.Date: {expiration_date}</ExpireDate>
@@ -94,17 +63,17 @@ export default function DetailNav({ taskName, taskDetail }) {
         <DeleteBtn onClick={onDeleteClick}>Task 삭제</DeleteBtn>
         {deleteModal && (
           <DeleteModal
-            taskName={taskName}
+            taskName={name}
             taskKind={kind}
             expDate={expiration_date}
-            deleteTask={deleteTask}
             setDeleteModal={setDeleteModal}
+            handleDeleteTask={handleDeleteTask}
           />
         )}
         <CompleteBtn
           disabled={
             Math.round((doneVideos / totalVideos) * 100) == 100 &&
-            taskDetail.status === false
+            status === false
               ? false
               : true
           }
@@ -115,7 +84,9 @@ export default function DetailNav({ taskName, taskDetail }) {
       </ButtonsWrap>
     </DetailTop>
   );
-}
+};
+
+export default React.memo(DetailNav);
 
 const DetailTop = styled.div`
   display: flex;

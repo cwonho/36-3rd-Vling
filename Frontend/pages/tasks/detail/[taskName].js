@@ -1,64 +1,96 @@
 import styled from 'styled-components';
-import { useEffect, useState } from 'react';
-import { TASK_DETAIL, GET_ALL_LABELERS } from '../../../components/gql';
+import client from '../../../components/apollo-client';
+import { useEffect, useState, useMemo } from 'react';
+import { useMutation } from '@apollo/client';
+import {
+  TASK_DETAIL,
+  GET_ALL_LABELERS,
+  DELETE_TASK_OF_LABELER,
+  ADD_TASK_TO_LABELER,
+} from '../../../components/gql';
 import DetailNav from './components/DetailNav';
 import CurrLabelersList from './components/CurrLabelersList';
 import AllLabelersList from './components/AllLabelersList';
-import client from '../../../components/apollo-client';
+import Progress from './components/Progress';
 
-export default function TaskDetail({ taskName, allLabelers, taskInfo }) {
+const TaskDetail = ({ taskName, allLabelers, taskInfo }) => {
   const [taskDetail, setTaskDetail] = useState([]);
   const [currLabelersList, setCurrLabelersList] = useState([]);
   const [labelersList, setLabelersList] = useState([]);
 
+  const [deleteTaskOfLabeler] = useMutation(DELETE_TASK_OF_LABELER);
+  const [addTaskToLabeler] = useMutation(ADD_TASK_TO_LABELER);
+
+  if (taskDetail === undefined) {
+    return;
+  }
+
+  const { status, totalVideos, doneVideos } = taskDetail;
+
   useEffect(() => {
-    setTaskDetail(taskInfo?.data?.getTaskDetail);
-    setCurrLabelersList(taskInfo?.data?.getTaskDetail?.labelers);
-    setLabelersList(allLabelers?.data?.getAllLabelers);
-  }, [
-    taskInfo?.data?.getTaskDetail,
-    taskInfo?.data?.getTaskDetail?.labelers,
-    allLabelers?.data?.getAllLabelers,
-  ]);
+    setTaskDetail(taskInfo.data.getTaskDetail);
+    setCurrLabelersList(taskInfo.data.getTaskDetail.labelers);
+    setLabelersList(allLabelers.data.getAllLabelers);
+  }, []);
+
+  const onDeleteLabeler = async (e, id) => {
+    await deleteTaskOfLabeler({
+      variables: { id: id, email: e.target.value, name: taskName },
+    });
+
+    setCurrLabelersList(
+      currLabelersList.filter(labeler => labeler.email !== e.target.value)
+    );
+  };
+
+  const onAddLabeler = async (e, id) => {
+    await addTaskToLabeler({
+      variables: { id: id, email: e.target.value, name: taskName },
+    });
+
+    setCurrLabelersList([
+      ...currLabelersList,
+      { _id: id, email: e.target.value },
+    ]);
+  };
+
+  const ProgressCalculation = useMemo(() => {
+    const rateNumber = ((doneVideos / totalVideos) * 100).toFixed(2);
+    const rate = Math.round((doneVideos / totalVideos) * 100);
+
+    return { rateNumber, rate };
+  }, [doneVideos, totalVideos]);
+
+  const { rateNumber, rate } = ProgressCalculation;
 
   return (
     <>
       <InnerWrap>
-        <DetailNav taskName={taskName} taskDetail={taskDetail} />
+        <DetailNav {...taskDetail} />
         <LabelersInfoWrap>
           <CurrLabelersList
             taskName={taskName}
             currLabelersList={currLabelersList}
-            setCurrLabelersList={setCurrLabelersList}
+            onDeleteLabeler={onDeleteLabeler}
           />
           <AllLabelersList
-            taskName={taskName}
             allLabelers={labelersList}
             currLabelersList={currLabelersList}
-            setCurrLabelersList={setCurrLabelersList}
+            onAddLabeler={onAddLabeler}
           />
         </LabelersInfoWrap>
         <ProgressInfo>
-          <RateNumber>
-            {((taskDetail?.doneVideos / taskDetail?.totalVideos) * 100).toFixed(
-              2
-            )}
-            %
-          </RateNumber>
+          <RateNumber>{rateNumber}%</RateNumber>
           <ProgressWrap>
-            <FullBar status={taskDetail?.status}></FullBar>
-            <RateBar
-              status={taskDetail?.status}
-              rate={Math.round(
-                (taskDetail.doneVideos / taskDetail?.totalVideos) * 100
-              )}
-            ></RateBar>
+            <FullBar status={status}></FullBar>
+            <RateBar status={status} rate={rate}></RateBar>
           </ProgressWrap>
         </ProgressInfo>
+        <Progress />
       </InnerWrap>
     </>
   );
-}
+};
 
 export async function getServerSideProps({ params }) {
   const taskInfo = await client.query({
@@ -78,6 +110,8 @@ export async function getServerSideProps({ params }) {
     props: { taskName, allLabelers, taskInfo },
   };
 }
+
+export default TaskDetail;
 
 const InnerWrap = styled.div`
   width: 90%;

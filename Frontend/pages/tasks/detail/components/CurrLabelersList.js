@@ -1,25 +1,10 @@
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useMutation } from '@apollo/client';
-import { DELETE_TASK_OF_LABELER } from '../../../../components/gql';
 
 export default function CurrLabelersList({
-  taskName,
   currLabelersList,
-  setCurrLabelersList,
+  onDeleteLabeler,
 }) {
-  const [deleteTaskOfLabeler] = useMutation(DELETE_TASK_OF_LABELER);
-
-  const onDeleteLabeler = async (e, id) => {
-    await deleteTaskOfLabeler({
-      variables: { id: id, email: e.target.value, name: taskName },
-    });
-
-    setCurrLabelersList(
-      currLabelersList.filter(labeler => labeler.email !== e.target.value)
-    );
-  };
-
   return (
     <CurrentLabelersWrap>
       <CurrentLabelersTitle>
