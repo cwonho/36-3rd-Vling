@@ -1,53 +1,15 @@
 import React from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
 import ModalPortal from '../../../../components/ModalPortal';
-import { toast } from 'react-toastify';
-import { useRouter } from 'next/router';
 
 export default function CreateModal({
-  setModalOpen,
-  addTask,
+  toggleModal,
   taskName,
   taskKind,
-  labelerList,
   expDate,
-  bodyFormData,
+  labelerList,
+  handleAddTask,
 }) {
-  const router = useRouter();
-  const handleAddTask = async () => {
-    bodyFormData.append('taskName', taskName);
-    try {
-      await addTask({
-        variables: {
-          name: taskName,
-          kind: taskKind,
-          labelers: labelerList,
-          expirationDate: expDate.split('-').join(''),
-        },
-      });
-    } catch (err) {
-      toast.error(err.message);
-    }
-    axios({
-      method: 'POST',
-      url: 'http://www2.wecode.buzzntrend.com:4000/upload',
-      headers: { 'Content-Type': 'multipart/form-data' },
-      data: bodyFormData,
-    }).then(response => {
-      if (response.data.success == true) {
-        setModalOpen(false);
-        toast.success('task 등록이 완료되었습니다.');
-        router.push('/tasks');
-      }
-      if (response.data.success == false) {
-        setModalOpen(false);
-        toast.error('task 등록이 실패하였습니다.');
-        router.push('/tasks');
-      }
-    });
-  };
-
   return (
     <ModalPortal>
       <BlurWrap />
@@ -68,7 +30,7 @@ export default function CreateModal({
         </SubWrap>
         <BtnWrap>
           <DeleteBtn onClick={handleAddTask}>등록하기</DeleteBtn>
-          <CancleBtn onClick={() => setModalOpen(false)}>취소</CancleBtn>
+          <CancleBtn onClick={toggleModal}>취소</CancleBtn>
         </BtnWrap>
       </Wrap>
     </ModalPortal>

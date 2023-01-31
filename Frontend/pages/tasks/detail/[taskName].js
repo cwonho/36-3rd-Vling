@@ -8,10 +8,10 @@ import {
   DELETE_TASK_OF_LABELER,
   ADD_TASK_TO_LABELER,
 } from '../../../components/gql';
+import { toast } from 'react-toastify';
 import DetailNav from './components/DetailNav';
 import CurrLabelersList from './components/CurrLabelersList';
 import AllLabelersList from './components/AllLabelersList';
-import Progress from './components/Progress';
 
 const TaskDetail = ({ taskName, allLabelers, taskInfo }) => {
   const [taskDetail, setTaskDetail] = useState([]);
@@ -34,24 +34,36 @@ const TaskDetail = ({ taskName, allLabelers, taskInfo }) => {
   }, []);
 
   const onDeleteLabeler = async (e, id) => {
-    await deleteTaskOfLabeler({
-      variables: { id: id, email: e.target.value, name: taskName },
-    });
+    try {
+      await deleteTaskOfLabeler({
+        variables: { id: id, email: e.target.value, name: taskName },
+      });
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
 
     setCurrLabelersList(
       currLabelersList.filter(labeler => labeler.email !== e.target.value)
     );
+    toast.success('라벨러가 삭제되었습니다.');
   };
 
   const onAddLabeler = async (e, id) => {
-    await addTaskToLabeler({
-      variables: { id: id, email: e.target.value, name: taskName },
-    });
+    try {
+      await addTaskToLabeler({
+        variables: { id: id, email: e.target.value, name: taskName },
+      });
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
 
     setCurrLabelersList([
       ...currLabelersList,
       { _id: id, email: e.target.value },
     ]);
+    toast.success('라벨러가 등록되었습니다.');
   };
 
   const ProgressCalculation = useMemo(() => {
@@ -86,7 +98,6 @@ const TaskDetail = ({ taskName, allLabelers, taskInfo }) => {
             <RateBar status={status} rate={rate}></RateBar>
           </ProgressWrap>
         </ProgressInfo>
-        <Progress />
       </InnerWrap>
     </>
   );

@@ -8,42 +8,36 @@ import {
   GET_ALL_LABELERS,
 } from '../../../components/gql';
 import { useRouter } from 'next/router';
+import { toast } from 'react-toastify';
+import axios from 'axios';
 import client from '../../../components/apollo-client';
 
 export default function AddTask({ allTasks, allLabelers }) {
-  const [labelersAll, setLabelersAll] = useState([]);
   const [tasksAll, setTasksAll] = useState([]);
-  const [showLabelerList, setShowLabelerList] = useState(false);
-  const [taskName, setTaskName] = useState('');
-  const [taskKind, setTaskKind] = useState('');
-  const [expDate, setExpDate] = useState('');
+  const [labelersAll, setLabelersAll] = useState([]);
+  const [taskInfo, setTaskInfo] = useState({
+    name: '',
+    kind: '',
+    expDate: '',
+  });
   const [labelerList, setLabelerList] = useState([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [showLabelerList, setShowLabelerList] = useState(false);
+  const [modal, setModal] = useState(false);
   const [bodyFormData, setBodyFormData] = useState(new FormData());
+
+  const [addTask] = useMutation(ADD_TASK);
+
+  const router = useRouter();
+
+  const { name, kind, expDate } = taskInfo;
 
   useEffect(() => {
     setLabelersAll(allLabelers.data.getAllLabelers);
     setTasksAll(allTasks.data.getAllTasks);
-  }, [allLabelers, allTasks]);
+  }, []);
 
-  const router = useRouter();
-
-  const onClickShowList = () => {
-    setShowLabelerList(true);
-  };
-
-  const handleTaskNameInput = e => {
-    setTaskName(e.target.value);
-  };
-
-  const handleTaskKindSelect = e => {
-    const kindSelect = document.getElementById('kindSelect');
-    const selected = kindSelect.options[kindSelect.selectedIndex].value;
-    setTaskKind(selected);
-  };
-
-  const handleExpDateInput = e => {
-    setExpDate(e.target.value);
+  const handleTaskInfoChange = e => {
+    setTaskInfo({ ...taskInfo, [e.target.name]: e.target.value });
   };
 
   const handleAddLabeler = (e, id) => {
@@ -67,16 +61,56 @@ export default function AddTask({ allTasks, allLabelers }) {
     setBodyFormData(formData);
   };
 
-  const [addTask] = useMutation(ADD_TASK);
+  const handleAddTask = async () => {
+    bodyFormData.append('taskName', name);
+    try {
+      await addTask({
+        variables: {
+          name: name,
+          kind: kind,
+          labelers: labelerList,
+          expirationDate: expDate.split('-').join(''),
+        },
+      });
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
+    axios({
+      method: 'POST',
+      url: 'http://www2.wecode.buzzntrend.com:4000/upload',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      data: bodyFormData,
+    }).then(response => {
+      if (response.data.success == true) {
+        setModal(false);
+        toast.success('task 등록이 완료되었습니다.');
+        router.push('/tasks');
+      }
+      if (response.data.success == false) {
+        setModal(false);
+        toast.error('task 등록이 실패하였습니다.');
+        router.push('/tasks');
+      }
+    });
+  };
 
   const isNotValid =
     bodyFormData.get('file') == undefined ||
-    taskName.length === 0 ||
-    tasksAll.find(task => task.name === taskName) ||
-    taskKind === '---선택---' ||
-    taskKind.length === 0 ||
+    name.length === 0 ||
+    tasksAll.find(task => task.name === name) ||
+    kind === '---선택---' ||
+    kind.length === 0 ||
     expDate.length === 0 ||
     labelerList.length === 0;
+
+  const toggleModal = () => {
+    setModal(curr => !curr);
+  };
+
+  const onClickShowList = () => {
+    setShowLabelerList(curr => !curr);
+  };
 
   const onClickBack = () => {
     router.push('/tasks');
@@ -86,12 +120,7 @@ export default function AddTask({ allTasks, allLabelers }) {
     <InnerWrap>
       <TaskNav>
         <AddTaskBtn onClick={onClickBack}>뒤로가기</AddTaskBtn>
-        <SubmitButton
-          onClick={() => {
-            setModalOpen(true);
-          }}
-          disabled={isNotValid}
-        >
+        <SubmitButton onClick={toggleModal} disabled={isNotValid}>
           task 등록
         </SubmitButton>
       </TaskNav>
@@ -111,22 +140,22 @@ export default function AddTask({ allTasks, allLabelers }) {
           <TaskNameWrap>
             <TaskName>Task Name:</TaskName>
             <TaskNameInput
-              value={taskName}
+              name="name"
+              value={name}
               placeholder="예: 영상목록1"
-              onChange={handleTaskNameInput}
-              duplicated={tasksAll.find(task => task.name === taskName)}
+              onChange={handleTaskInfoChange}
+              duplicated={tasksAll.find(task => task.name === name)}
             ></TaskNameInput>
-            <ErrorMsg
-              duplicated={tasksAll.find(task => task.name === taskName)}
-            >
+            <ErrorMsg duplicated={tasksAll.find(task => task.name === name)}>
               ! 중복된 이름입니다.
             </ErrorMsg>
           </TaskNameWrap>
           <TaskNameWrap>
             <TaskName>Task Kind:</TaskName>
             <TaskKindSelect
-              id="kindSelect"
-              onChange={e => handleTaskKindSelect(e)}
+              name="kind"
+              value={kind}
+              onChange={handleTaskInfoChange}
             >
               <TaskKindOption defaultValue="---선택---">
                 ---선택---
@@ -140,8 +169,9 @@ export default function AddTask({ allTasks, allLabelers }) {
             <TaskName>Expire Date:</TaskName>
             <TaskNameInput
               type="date"
-              onChange={handleExpDateInput}
+              name="expDate"
               value={expDate}
+              onChange={handleTaskInfoChange}
             ></TaskNameInput>
           </TaskNameWrap>
           <LabelersInfoWrap>
@@ -168,16 +198,14 @@ export default function AddTask({ allTasks, allLabelers }) {
             <AllLabelers>
               All Labelers ({showLabelerList && labelersAll.length}):
             </AllLabelers>
-            {modalOpen && (
+            {modal && (
               <CreateModal
-                modalOpen={modalOpen}
-                setModalOpen={setModalOpen}
-                addTask={addTask}
-                taskName={taskName}
-                taskKind={taskKind}
-                labelerList={labelerList}
+                toggleModal={toggleModal}
+                taskName={name}
+                taskKind={kind}
                 expDate={expDate}
-                bodyFormData={bodyFormData}
+                labelerList={labelerList}
+                handleAddTask={handleAddTask}
               />
             )}
           </NavTop>
